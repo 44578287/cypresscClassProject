@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "settings.h": "c",
+        "gpioplus.h": "c"
+    }
+}
