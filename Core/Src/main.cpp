@@ -30,8 +30,8 @@
 #include <string.h>
 
 // 重定向输出
-#include "rom.h"
 #define REDIRECT_OUTPUT
+#include "rom.h"
 #include "settings.h"
 #include "gpioPlus.h"
 #include "event.h"
@@ -58,13 +58,18 @@
 /* USER CODE BEGIN PV */
 AT24C08C eeprom(&hi2c1, 0x50); // EEPROM
 
-uint8_t tempSerialData[32];
-uint8_t tempSerialDataIndex = 0;
+#define RX_BUFFER_SIZE 256                 // 环形缓冲区大小
+volatile uint8_t rxBuffer[RX_BUFFER_SIZE]; // 环形缓冲区
+volatile uint16_t rxHead = 0;              // 写指针
+volatile uint16_t rxTail = 0;              // 读指针
+
+volatile bool dataReceivedFlag = false; // 数据接收标志
 
 Gpio led5(GPIOA, GPIO_PIN_6), // PA6
     led6(GPIOA, GPIO_PIN_7);  // PA7
 
-uint8_t mode = 1;
+volatile uint8_t mode = 0;
+uint8_t lastMode = 0;
 
 extern "C"
 {
@@ -78,6 +83,7 @@ extern "C"
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void StartUARTReceive();
+void ProcessReceivedData(uint8_t data);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -164,6 +170,26 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+    // 串口接收数据处理
+    if (dataReceivedFlag)
+    {
+      dataReceivedFlag = false;
+      // 处理接收到的数据
+      while (rxTail != rxHead)
+      {
+        uint8_t data = rxBuffer[rxTail];
+        rxTail = (rxTail + 1) % RX_BUFFER_SIZE;
+        ProcessReceivedData(data);
+      }
+    }
+
+    //LED模式切换
+    if (lastMode != mode)
+    {
+      ledModeSwitch(mode);
+      lastMode = mode;
+    }
   }
   /* USER CODE END 3 */
 }
@@ -213,9 +239,12 @@ void SystemClock_Config(void)
 /// @brief 处理接收到的数据
 void ProcessReceivedData(uint8_t data)
 {
+  static uint8_t tempSerialData[RX_BUFFER_SIZE];
+  static uint16_t tempSerialDataIndex = 0;
+
   tempSerialData[tempSerialDataIndex] = data;
   tempSerialDataIndex++;
-  if (data == 0x21) // '!' 表示结束�??
+  if (data == 0x21) // '!' 表示结束符
   {
     tempSerialData[tempSerialDataIndex - 1] = 0;
     tempSerialDataIndex = 0;
@@ -225,7 +254,6 @@ void ProcessReceivedData(uint8_t data)
     {
       printf("参数: %c\n", p[4]);
       mode = p[4] - 48;
-      ledModeSwitch(mode);
     }
     else if ((p = strstr((char *)tempSerialData, "w 0xb")) != NULL)
     {
@@ -265,11 +293,16 @@ void ProcessReceivedData(uint8_t data)
       printf("未知命令\n");
     }
   }
+
+  if (tempSerialDataIndex >= RX_BUFFER_SIZE)
+  {
+    tempSerialDataIndex = 0;
+  }
 }
-uint8_t rxBuffer; // 定义接收缓冲区
+
 void StartUARTReceive(void)
 {
-  if (HAL_UART_Receive_IT(&huart1, &rxBuffer, 1) != HAL_OK)
+  if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&rxBuffer[rxHead], 1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -281,8 +314,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART1)
   {
-    ProcessReceivedData(rxBuffer);
-    HAL_UART_Receive_IT(&huart1, &rxBuffer, 1);
+    rxHead = (rxHead + 1) % RX_BUFFER_SIZE;
+
+    // 缓冲区溢出
+    if (rxHead == rxTail)
+    {
+      rxTail = (rxTail + 1) % RX_BUFFER_SIZE; // 覆盖数据
+    }
+
+    dataReceivedFlag = true;
+
+    // 继续接收下一个字节
+    HAL_UART_Receive_IT(huart, (uint8_t *)&rxBuffer[rxHead], 1);
   }
 }
 
@@ -298,7 +341,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
     mode = 1;
   }
-  ledModeSwitch(mode);
 }
 /* USER CODE END 4 */
 
