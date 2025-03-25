@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// 重定向输出
+// Redirect output
 #define REDIRECT_OUTPUT
 #include "rom.h"
 #include "settings.h"
@@ -58,12 +58,12 @@
 /* USER CODE BEGIN PV */
 AT24C08C eeprom(&hi2c1, 0x50); // EEPROM
 
-#define RX_BUFFER_SIZE 256                 // 环形缓冲区大小
-volatile uint8_t rxBuffer[RX_BUFFER_SIZE]; // 环形缓冲区
-volatile uint16_t rxHead = 0;              // 写指针
-volatile uint16_t rxTail = 0;              // 读指针
+#define RX_BUFFER_SIZE 256                 // Ring buffer size
+volatile uint8_t rxBuffer[RX_BUFFER_SIZE]; // Circular buffer
+volatile uint16_t rxHead = 0;              // Write pointer
+volatile uint16_t rxTail = 0;              // Read pointer
 
-volatile bool dataReceivedFlag = false; // 数据接收标志
+volatile bool dataReceivedFlag = false; // Data reception flag
 
 Gpio led5(GPIOA, GPIO_PIN_6), // PA6
     led6(GPIOA, GPIO_PIN_7);  // PA7
@@ -73,7 +73,7 @@ uint8_t lastMode = 0;
 
 extern "C"
 {
-  /// @brief 100ms回调
+  /// @brief 100ms callback
   extern Event<> milliseconds_100;
 }
 
@@ -115,7 +115,7 @@ void ledModeSwitch(uint8_t mode)
     break;
 
   default:
-    printf("模式不存在\n");
+    printf("The model does not exist\n");
     ledclear();
     return;
     break;
@@ -164,18 +164,18 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   ledclear();
-  printf("初始化完成\n");
+  printf("Initialization complete\n");
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-    // 串口接收数据处理
+    // Serial port data processing
     if (dataReceivedFlag)
     {
       dataReceivedFlag = false;
-      // 处理接收到的数据
+      // Processing the received data
       while (rxTail != rxHead)
       {
         uint8_t data = rxBuffer[rxTail];
@@ -184,7 +184,7 @@ int main(void)
       }
     }
 
-    //LED模式切换
+    //LED mode switching
     if (lastMode != mode)
     {
       ledModeSwitch(mode);
@@ -236,7 +236,7 @@ void SystemClock_Config(void)
   }
 }
 /* USER CODE BEGIN 4 */
-/// @brief 处理接收到的数据
+/// @brief Processing received data
 void ProcessReceivedData(uint8_t data)
 {
   static uint8_t tempSerialData[RX_BUFFER_SIZE];
@@ -244,15 +244,15 @@ void ProcessReceivedData(uint8_t data)
 
   tempSerialData[tempSerialDataIndex] = data;
   tempSerialDataIndex++;
-  if (data == 0x21) // '!' 表示结束符
+  if (data == 0x21) // '!' End marker
   {
     tempSerialData[tempSerialDataIndex - 1] = 0;
     tempSerialDataIndex = 0;
-    printf("输入命令: %s\n", tempSerialData);
+    printf("input command: %s\n", tempSerialData);
     char *p;
     if ((p = strstr((char *)tempSerialData, "mode")) != NULL)
     {
-      printf("参数: %c\n", p[4]);
+      printf("Parameters: %c\n", p[4]);
       mode = p[4] - 48;
     }
     else if ((p = strstr((char *)tempSerialData, "w 0xb")) != NULL)
@@ -261,14 +261,14 @@ void ProcessReceivedData(uint8_t data)
 
       if (sscanf(p + 5, "%2x%2x", &addr, &data) == 2)
       {
-        printf("写入数据: 地址0x%x 数据0x%x\n", addr, data);
+        printf("Write data: Address 0x%x Data 0x%x\n", addr, data);
         if (eeprom.writeByte(addr, data) != HAL_ERROR)
           printf("OK\n");
         else
           printf("FAIL\n");
       }
       else
-        printf("解析失败: 输入格式不正确\n");
+        printf("Parsing Failed: Incorrect Input Format\n");
     }
     else if ((p = strstr((char *)tempSerialData, "r 0xb")) != NULL)
     {
@@ -279,18 +279,18 @@ void ProcessReceivedData(uint8_t data)
       {
         if (eeprom.readByte(addr, data) != HAL_ERROR)
         {
-          printf("读取数据: 地址0x%x 数据0x%x\n", addr, data);
+          printf("Read data: Address 0x%x Data 0x%x\n", addr, data);
           printf("OK\n");
         }
         else
           printf("FAIL\n");
       }
       else
-        printf("解析失败: 输入格式不正确\n");
+        printf("Parsing Failed: Incorrect Input Format\n");
     }
     else
     {
-      printf("未知命令\n");
+      printf("Unknown command\n");
     }
   }
 
@@ -308,7 +308,7 @@ void StartUARTReceive(void)
   }
 }
 
-/// @brief 串口接收中断回调函数
+/// @brief Serial port receive interrupt callback function
 /// @param huart
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -316,20 +316,20 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
   {
     rxHead = (rxHead + 1) % RX_BUFFER_SIZE;
 
-    // 缓冲区溢出
+    // Buffer overflow
     if (rxHead == rxTail)
     {
-      rxTail = (rxTail + 1) % RX_BUFFER_SIZE; // 覆盖数据
+      rxTail = (rxTail + 1) % RX_BUFFER_SIZE; // Overlay data
     }
 
     dataReceivedFlag = true;
 
-    // 继续接收下一个字节
+    // Receive the next byte
     HAL_UART_Receive_IT(huart, (uint8_t *)&rxBuffer[rxHead], 1);
   }
 }
 
-/// @brief IO中断回调函数
+/// @brief IO interrupt callback function
 /// @param GPIO_Pin
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {

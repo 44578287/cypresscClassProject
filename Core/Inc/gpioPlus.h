@@ -4,33 +4,33 @@
 
 #ifdef __cplusplus
 /**
- * @class 自定Gpio
- * @brief 用來简化控制GPIO的操作
+ * @class Custom GPIO
+ * @brief Simplifying GPIO control operations
  */
 class Gpio
 {
 private:
     GPIO_TypeDef *port;
     uint16_t pin;
-    // 是否反转
+    // Reverse
     uint8_t reverse;
 
 public:
     /**
-     * @brief 创建新的Gpio对象
-     * @param port GPIO端口
-     * @param pin GPIO引脚
-     * @param reverse 是否反转
+     * @brief Create a new GPIO object
+     * @param port GPIO port
+     * @param pin GPIO pins
+     * @param reverse Reverse
      */
     Gpio(GPIO_TypeDef *port, uint16_t pin, uint8_t reverse = 0)
         : port(port), pin(pin), reverse(reverse) {}
 
     /**
-     * @brief 创建新的Gpio对象
-     * @param port GPIO端口
-     * @param pin GPIO引脚
-     * @param state GPIO状态
-     * @param reverse 是否反转
+     * @brief Create a new GPIO object
+     * @param port GPIO port
+     * @param pin GPIO pins
+     * @param state GPIO Status
+     * @param reverse Reverse
      */
     Gpio(GPIO_TypeDef *port, uint16_t pin, GPIO_PinState state, uint8_t reverse = 0)
         : port(port), pin(pin), reverse(reverse)
@@ -39,7 +39,7 @@ public:
     }
 
     /**
-     * @brief 切换GPIO状态
+     * @brief Toggle GPIO state
      */
     void toggle()
     {
@@ -47,7 +47,7 @@ public:
     }
 
     /**
-     * @brief 打开GPIO
+     * @brief Enable GPIO
      */
     inline void on()
     {
@@ -56,7 +56,7 @@ public:
     }
 
     /**
-     * @brief 关闭GPIO
+     * @brief Turn off the GPIO
      */
     inline void off()
     {
@@ -65,8 +65,8 @@ public:
     }
 
     /**
-     * @brief 设置GPIO状态
-     * @param state GPIO状态
+     * @brief Setting GPIO Status
+     * @param state GPIO Status
      */
     inline void set(GPIO_PinState state)
     {
@@ -75,8 +75,8 @@ public:
     }
 
     /**
-     * @brief 读取GPIO状态
-     * @return GPIO状态
+     * @brief Read GPIO status
+     * @return GPIO Status
      */
     GPIO_PinState read()
     {

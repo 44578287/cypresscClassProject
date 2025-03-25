@@ -1,47 +1,38 @@
-# 西柏科技期末课堂作业
 
-## 项目简介 
+# Cypress Technology End-of-Term Classroom Assignment
 
-该项目是基于STM32微控制器开发的一个嵌入式应用程序，主要功能包括：
+## Project Introduction
 
-1. 通过UART接收命令并解析，实现串口通信控制。
+This project is an embedded application developed based on the STM32 microcontroller. The main functions include:
 
-2. 控制LED灯模式的切换（如闪烁模式、状态显示）。
+1. Receive and parse commands through UART to achieve serial communication control.
+2. Control the switching of LED light modes (such as blinking mode, status display).
+3. Communicate with EEPROM to perform read and write operations.
+4. Use an event callback mechanism to simplify the handling of timers and external interrupts.
 
-3. 与EEPROM通信，完成数据的读写操作。
+## System Architecture
 
-4. 使用事件回调机制简化定时器和外部中断的处理。
+The program adopts a modular design, with core modules including:
 
-## 系统架构 
-
-程序采用模块化设计，核心模块包括：
- 
-- **main.cpp** ：主程序逻辑。
- 
-- **stm32f0xx_it.cpp** ：中断服务函数。
- 
-- **rom.h** ：EEPROM (AT24C08C) 数据读写实现。
- 
-- **settings.h** ：串口重定向实现。
- 
-- **gpioPlus.h** ：GPIO封装类，简化了GPIO操作。
- 
-- **event.h** ：模板事件类，支持灵活的回调注册与触发。
-
+- **main.cpp**: Main program logic.
+- **stm32f0xx_it.cpp**: Interrupt service functions.
+- **rom.h**: EEPROM (AT24C08C) data read and write implementation.
+- **settings.h**: Serial port redirection implementation.
+- **gpioPlus.h**: GPIO wrapper class, simplifying GPIO operations.
+- **event.h**: Template event class, supporting flexible callback registration and triggering.
 
 ---
 
+## Function Description
 
-## 功能说明 
+### 1. Serial Communication and Command Parsing
 
-### 1. 串口通信与命令解析 
+The program receives commands via UART, supporting the following functions:
 
-程序通过UART接收命令，支持以下功能：
+- Switch LED modes.
+- EEPROM data read and write.
 
-- 切换LED模式。
-
-- EEPROM数据读写。
-**核心代码解析：** 
+**Core Code Analysis:**
 
 ```c++
 void ProcessReceivedData(uint8_t data) {
@@ -50,20 +41,20 @@ void ProcessReceivedData(uint8_t data) {
 
     tempSerialData[tempSerialDataIndex] = data;
     tempSerialDataIndex++;
-    if (data == 0x21) { // '!' 表示命令结束符
+    if (data == 0x21) { // '!' indicates end of command
         tempSerialData[tempSerialDataIndex - 1] = 0;
         tempSerialDataIndex = 0;
-        printf("输入命令: %s\n", tempSerialData);
+        printf("Input command: %s", tempSerialData);
 
         char *p;
         if ((p = strstr((char *)tempSerialData, "mode")) != NULL) {
-            mode = p[4] - 48; // 提取模式
+            mode = p[4] - 48; // Extract mode
         } else if ((p = strstr((char *)tempSerialData, "w 0xb")) != NULL) {
-            // EEPROM写操作
+            // EEPROM write operation
         } else if ((p = strstr((char *)tempSerialData, "r 0xb")) != NULL) {
-            // EEPROM读操作
+            // EEPROM read operation
         } else {
-            printf("未知命令\n");
+            printf("Unknown command");
         }
     }
 
@@ -73,18 +64,19 @@ void ProcessReceivedData(uint8_t data) {
 }
 ```
 
-此段代码通过解析命令字符串，实现动态功能调用。
-
+This code parses the command string and dynamically calls functions.
 
 ---
 
+### 2. LED Mode Switching
 
-### 2. LED模式切换 
-支持多种LED模式（如闪烁、全灭）。通过按键触发或者串口命令改变 `mode`。**代码示例：** 
+Supports multiple LED modes (such as blinking, full off). The mode can be changed by pressing a button or using serial commands to modify the `mode`.
+
+**Code Example:**
 
 ```c++
 void ledModeSwitch(uint8_t mode) {
-    ledclear(); // 关闭所有LED
+    ledclear(); // Turn off all LEDs
     switch (mode) {
     case 1:
         led5.on();
@@ -100,40 +92,46 @@ void ledModeSwitch(uint8_t mode) {
         });
         break;
     default:
-        printf("模式不存在\n");
+        printf("Mode does not exist");
         return;
     }
-    printf("Mode%d activated\n", mode);
+    printf("Mode%d activated", mode);
 }
 ```
-此函数通过事件回调 `milliseconds_100` 实现LED灯的闪烁逻辑。
+
+This function uses the event callback `milliseconds_100` to implement the blinking logic for the LEDs.
 
 ---
 
+### 3. EEPROM Data Operations
 
-### 3. EEPROM数据操作 
-通过 `rom.h` 提供的封装，简化了AT24C08C EEPROM的读写操作。**代码示例：** 
+The `rom.h` file simplifies the read and write operations for the AT24C08C EEPROM.
+
+**Code Example:**
 
 ```c++
-// 写单字节数据
+// Write a single byte of data
 if (eeprom.writeByte(addr, data) != HAL_ERROR) {
-    printf("OK\n");
+    printf("OK");
 } else {
-    printf("FAIL\n");
+    printf("FAIL");
 }
 
-// 读单字节数据
+// Read a single byte of data
 if (eeprom.readByte(addr, data) != HAL_ERROR) {
-    printf("读取数据: 地址0x%x 数据0x%x\n", addr, data);
+    printf("Read data: Address 0x%x Data 0x%x", addr, data);
 }
 ```
-`rom.h` 使用了I2C协议对EEPROM进行封装，支持单字节和多字节读写。
+
+`rom.h` uses the I2C protocol to wrap EEPROM operations, supporting both single-byte and multi-byte reads and writes.
 
 ---
 
+### 4. GPIO Wrapping
 
-### 4. GPIO封装 
-`gpioPlus.h` 提供了 `Gpio` 类，简化GPIO的常见操作（如开、关、反转等），并支持状态读取。**核心代码示例：** 
+The `gpioPlus.h` file provides the `Gpio` class, simplifying common GPIO operations (such as turning on, off, toggling, etc.) and supports state reading.
+
+**Core Code Example:**
 
 ```c++
 Gpio led5(GPIOA, GPIO_PIN_6), led6(GPIOA, GPIO_PIN_7);
@@ -143,33 +141,31 @@ void ledclear() {
     led6.off();
 }
 
-led5.toggle(); // 切换状态
-led5.on();     // 打开GPIO
-led5.off();    // 关闭GPIO
+led5.toggle(); // Toggle state
+led5.on();     // Turn on GPIO
+led5.off();    // Turn off GPIO
 ```
 
-通过封装，开发者无需直接操作寄存器，大大提高了代码可读性。
-
+With this wrapping, developers no longer need to directly manipulate registers, greatly improving code readability.
 
 ---
 
+## Library Introduction
 
-## 类库介绍 
 1. `rom.h`: 
-封装了EEPROM AT24C08C的I2C读写操作，支持以下功能：
- 
-- `writeByte`：写入单字节数据。
- 
-- `readByte`：读取单字节数据。
- 
-- `writeBytes`：写入多字节数据，带分页支持。
- 
-- `readBytes`：读取多字节数据。
-2. `settings.h`: 实现了UART的重定向，将 `printf` 输出重定向到串口，使调试更加方便。3. `gpioPlus.h`** 
-封装了GPIO操作，提供了更简洁的接口，支持状态读取、切换、反转等功能。
+   Encapsulates the I2C read and write operations for the AT24C08C EEPROM, supporting the following functions:
+   - `writeByte`: Writes a single byte of data.
+   - `readByte`: Reads a single byte of data.
+   - `writeBytes`: Writes multiple bytes of data with paging support.
+   - `readBytes`: Reads multiple bytes of data.
+
+2. `settings.h`: Implements UART redirection, allowing `printf` output to be redirected to the serial port for easier debugging.
+3. `gpioPlus.h`: 
+   Simplifies GPIO operations, providing a more concise interface that supports status reading, toggling, and inversion.
 4. `event.h`: 
-模板事件类，支持注册和触发回调函数，广泛用于定时器和中断处理逻辑。
-**示例：** 
+   A template event class that supports registering and triggering callback functions, widely used for timer and interrupt handling logic.
+
+**Example:**
 
 ```c++
 Event<> milliseconds_100;
@@ -180,32 +176,25 @@ milliseconds_100.registerCallback([]() {
 milliseconds_100.trigger();
 ```
 
-
 ---
 
+## How to Run
 
-## 如何运行 
- 
-1. 使用STM32CubeMX生成基础工程，确保外设配置如下：
-  - 使用C++环境编译
+1. Use STM32CubeMX to generate the basic project, ensuring the peripheral configuration is as follows:
+   - Compile in a C++ environment.
+   - GPIO: PA6, PA7 for LED control, PA8, PB15 for button interrupts.
+   - UART: For serial communication.
+   - I2C: For communication with EEPROM.
 
-  - GPIO：PA6, PA7用于LED控制 PA8，PB15用于按钮中断。
+2. Use a serial tool to send commands to control the program:
+   - `!` is used to separate data.
+   - Switch LED mode: `modeX!`, for example, `mode1!` switches to mode 1.
+   - Write to EEPROM: `w 0xbAADD!`, for example, `w 0xb0110!` writes data `0x10` to address `0x01`.
+   - Read from EEPROM: `r 0xbAA!`, for example, `r 0xb01!` reads data from address `0x01`.
 
-  - UART：用于串口通信。
-
-  - I2C：用于与EEPROM通信。
- 
-2. 通过串口工具发送命令控制程序： 
-  - ! 用于分隔数据
-    
-  - 切换LED模式：`modeX!`，例如 `mode1!` 切换到模式1。
- 
-  - 写EEPROM：`w 0xbAADD!`，例如 `w 0xb0110!` 将数据 `0x10` 写入地址 `0x01`。
- 
-  - 读EEPROM：`r 0xbAA!`，例如 `r 0xb01!` 读取地址 `0x01` 的数据。
-
-## 展示
+## Display
 ![1735287828367 jpg_compressed](https://github.com/user-attachments/assets/5404a76d-f7e4-46c4-93ac-b1af0b3878bd)
 
 https://github.com/user-attachments/assets/90de9c9f-3e9d-4e44-8e27-8f8f550da950
 
+--- 

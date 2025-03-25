@@ -3,7 +3,7 @@
 
 #include "usart.h"
 
-// 重定向输出
+// Redirect output
 #ifdef REDIRECT_OUTPUT
 #ifdef __cplusplus
 extern "C"

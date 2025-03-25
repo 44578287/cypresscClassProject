@@ -42,7 +42,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-// 100ms事件
+// 100ms callback
 extern Event<> milliseconds_100 = Event<>();
 /* USER CODE END PV */
 

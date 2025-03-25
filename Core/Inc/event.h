@@ -1,33 +1,33 @@
 #ifndef EVENT_H
 #define EVENT_H
 
-// 模板事件类
+// Template Event Class
 template <typename... Args>
 class Event
 {
 public:
-    // 定义回调函数类型
+    // Defining Callback Function Types
     typedef void (*Callback)(Args...);
 
-    // 构造函数中指定回调
+    // Specifying callbacks in constructors
     Event(Callback callback = nullptr) : callback(callback) {}
 
-    // 注册或更改回调函数
+    // Registering or changing callback functions
     void registerCallback(Callback callback)
     {
         this->callback = callback;
     }
 
-    // 触发事件
+    // Trigger event
     void trigger(Args... args)
     {
         if (callback)
         {
-            callback(args...); // 调用回调函数
+            callback(args...); // Invoke the callback function
         }
     }
 
 private:
-    Callback callback; // 存储回调函数指针
+    Callback callback; // Store the callback function pointer
 };
 #endif // EVENT_H
